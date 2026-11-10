@@ -93,7 +93,7 @@ void X11Interface::interfaceThread()
         }
     }
 
-    std::string_view title = "TT DOOM Simulator";
+    std::string_view title = "Imp SoC Simulator";
     XChangeProperty(display, window, XA_WM_NAME, XA_STRING, 8, PropModeReplace, reinterpret_cast<const unsigned char*>(title.data()), title.size());
 
     std::vector<std::uint32_t> bitmap;
