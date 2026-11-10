@@ -108,7 +108,7 @@ private:
                 0xFFF00000,                             // xxxx xxxx xxxx ---- ---- ---- ---- ----
                 ((inst >> (21 - 1))  & 0x000007FE) |    // ---- ---- ---- ---- ---- -xxx xxxx xxx0
                 ((inst >> (20 - 11)) & 0x00000800) |    // ---- ---- ---- ---- ---- x--- ---- ----
-                (inst                & 0x000FF000);     // ---- ---- ---- xxxx xxxx ---- ---- ----
+                (inst                & 0x000FF000));    // ---- ---- ---- xxxx xxxx ---- ---- ----
     }
 
     static constexpr std::int32_t getImmI(std::uint32_t inst) noexcept
@@ -157,7 +157,7 @@ private:
                 inst,
                 0xFFFFF000,                             // xxxx xxxx xxxx xxxx xxxx ---- ---- ----
                 ((inst >> 7)        & 0x0000001F) |     // ---- ---- ---- ---- ---- ---- ---x xxxx
-                ((inst >> (25 - 5)  & 0x00000FE0));     // ---- ---- ---- ---- ---- xxxx xxx- ----
+                ((inst >> (25 - 5)  & 0x00000FE0)));    // ---- ---- ---- ---- ---- xxxx xxx- ----
     }
 
     static constexpr std::uint8_t getFunct3(std::uint32_t inst) noexcept
