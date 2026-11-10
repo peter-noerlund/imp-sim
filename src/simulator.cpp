@@ -6,7 +6,9 @@
 #include "simulation_exception.h"
 
 #include <algorithm>
+#include <chrono>
 #include <functional>
+#include <thread>
 
 namespace imp_sim
 {
@@ -18,11 +20,16 @@ Simulator::Simulator(Executable& executable, Interface& interface)
 {
 }
 
-void Simulator::run(bool)
+void Simulator::run(bool realTime)
 {
+    using namespace std::chrono_literals;
+
     m_interface.start(*this);
 
     m_registers[3] = 0x01000400;
+
+    auto startTime = std::chrono::high_resolution_clock::now();
+    unsigned long long int nextAdjustment = 666666;
 
     m_pc = 0;
     while (true)
@@ -35,6 +42,20 @@ void Simulator::run(bool)
             m_interrupted = true;
         }
         executeInstruction();
+
+        if (realTime && m_cycleCounter >= nextAdjustment)
+        {
+            auto now = std::chrono::high_resolution_clock::now();
+            auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(now - startTime);
+            auto expectedElapsed = 15ns * m_cycleCounter;
+            if (elapsed < expectedElapsed)
+            {
+                auto shortageTime = expectedElapsed - elapsed;
+                std::this_thread::sleep_for(shortageTime);
+            }
+
+            nextAdjustment = m_cycleCounter + 666666;
+        }
     }
 
     m_interface.stop();
@@ -58,6 +79,8 @@ void Simulator::executeInstruction()
     };
 
     std::uint32_t inst = load32(m_pc);
+
+    //std::println("{:x}", m_pc);
 
     m_cycleCounter += 56;
 
@@ -502,13 +525,13 @@ void Simulator::execSystemInst(std::uint32_t inst)
 
     auto funct3 = static_cast<SystemFunct3>(getFunct3(inst));
     auto csrOrFunc = getFunct12(inst);
-    auto rs1 = getRd(inst);
+    auto rs1 = getRs1(inst);
     auto rd = getRd(inst);
 
     switch (funct3)
     {
         case SystemFunct3::PRIV:
-            if (rs1 == 0 && rd == 0 && csrOrFunc == 0x18)
+            if (rs1 == 0 && rd == 0 && csrOrFunc == 0x302)
             {
                 // MRET
                 m_interrupted = false;
