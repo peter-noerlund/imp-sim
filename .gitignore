@@ -1,3 +1,4 @@
 .vscode
 build
-data
+test/test.elf
+test/test.bin
