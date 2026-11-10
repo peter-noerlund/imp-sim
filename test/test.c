@@ -7,10 +7,6 @@ volatile uint8_t color = 0x00;
 
 unsigned int g_counter = 0;
 
-void set_timer()
-{
-}
-
 void interrupt_handler()
 {
     if (g_counter++ % 128 == 0)
@@ -45,7 +41,7 @@ int main()
         {
             for (int x = 0; x != 16; ++x)
             {
-                video_buffer[y * 16 + x] = pixels;
+                video_buffer[y * 16 + x] = pixels * g_counter;
             }
         }
 

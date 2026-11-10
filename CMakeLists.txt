@@ -39,3 +39,9 @@ endif()
 target_compile_definitions(encode-image PRIVATE STB_IMAGE_IMPLEMENTATION)
 target_link_libraries(encode-image PRIVATE stb::stb)
 
+add_executable(encode-font tools/encode_font.cpp)
+target_compile_features(encode-font PRIVATE cxx_std_23)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(encode-font PRIVATE -Wall -W -Wextra -Wpedantic)
+endif()
+

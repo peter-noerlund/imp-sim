@@ -252,7 +252,7 @@ void encodeImage(const std::filesystem::path& filename, std::set<std::string>& v
         variableName = std::move(suffixedName);
     }
 
-    std::print("uint32_t {}[{}] = {{", variableName, chunks.size());
+    std::print("static const unsigned int {}[{}] = {{", variableName, chunks.size());
     if (width == 8)
     {
         bool first = true;

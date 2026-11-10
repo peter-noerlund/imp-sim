@@ -1,4 +1,4 @@
 .vscode
 build
-test/test.elf
-test/test.bin
+*.bin
+*.elf
