@@ -7,7 +7,7 @@
 namespace imp_sim
 {
 
-class BadInstructionException : SimulationException
+class BadInstructionException : public SimulationException
 {
 public:
     explicit BadInstructionException(std::uint32_t instruction);
