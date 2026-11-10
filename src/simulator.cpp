@@ -6,8 +6,6 @@
 #include "simulation_exception.h"
 
 #include <algorithm>
-#include <cstdio>
-#include <print>
 #include <functional>
 
 namespace imp_sim
@@ -22,6 +20,10 @@ Simulator::Simulator(Executable& executable, Interface& interface)
 
 void Simulator::run(bool)
 {
+    m_interface.start(*this);
+
+    m_registers[3] = 0x01000400;
+
     m_pc = 0;
     while (true)
     {
@@ -34,6 +36,8 @@ void Simulator::run(bool)
         }
         executeInstruction();
     }
+
+    m_interface.stop();
 }
 
 void Simulator::executeInstruction()
@@ -57,62 +61,55 @@ void Simulator::executeInstruction()
 
     m_cycleCounter += 56;
 
-    try
+    auto opcode = static_cast<Opcode>(inst & 0x7F);
+    switch (opcode)
     {
-        auto opcode = static_cast<Opcode>(inst & 0x7F);
-        switch (opcode)
-        {
-            case Opcode::LUI:
-                execLuiInst(inst);
-                break;
+        case Opcode::LUI:
+            execLuiInst(inst);
+            break;
 
-            case Opcode::AUIPC:
-                execAuipcInst(inst);
-                break;
+        case Opcode::AUIPC:
+            execAuipcInst(inst);
+            break;
 
-            case Opcode::JAL:
-                execJalInst(inst);
-                break;
+        case Opcode::JAL:
+            execJalInst(inst);
+            break;
 
-            case Opcode::JALR:
-                execJalrInst(inst);
-                break;
+        case Opcode::JALR:
+            execJalrInst(inst);
+            break;
 
-            case Opcode::BRANCH:
-                execBranchInst(inst);
-                break;
+        case Opcode::BRANCH:
+            execBranchInst(inst);
+            break;
 
-            case Opcode::LOAD:
-                execLoadInst(inst);
-                break;
+        case Opcode::LOAD:
+            execLoadInst(inst);
+            break;
 
-            case Opcode::STORE:
-                execStoreInst(inst);
-                break;
-            
-            case Opcode::OP_IMM:
-                execOpImmInst(inst);
-                break;
+        case Opcode::STORE:
+            execStoreInst(inst);
+            break;
 
-            case Opcode::OP:
-                execOpInst(inst);
-                break;
+        case Opcode::OP_IMM:
+            execOpImmInst(inst);
+            break;
 
-            case Opcode::MISC_MEM:
-                execMiscMemInst(inst);
-                break;
+        case Opcode::OP:
+            execOpInst(inst);
+            break;
 
-            case Opcode::SYSTEM:
-                execSystemInst(inst);
-                break;
+        case Opcode::MISC_MEM:
+            execMiscMemInst(inst);
+            break;
 
-            default:
-                throw BadInstructionException(inst);
-        }
-    }
-    catch (const SimulationException& exception)
-    {
-        std::println("Caught exception: {}", exception.what());
+        case Opcode::SYSTEM:
+            execSystemInst(inst);
+            break;
+
+        default:
+            throw BadInstructionException(inst);
     }
 }
 
@@ -133,7 +130,7 @@ void Simulator::execAuipcInst(std::uint32_t inst)
 void Simulator::execJalInst(std::uint32_t inst)
 {
     setReg(getRd(inst), m_pc + 4);
-    m_pc = getImmJ(inst);
+    m_pc += getImmJ(inst);
     m_cycleCounter += 16;
 }
 
@@ -144,8 +141,14 @@ void Simulator::execJalrInst(std::uint32_t inst)
         throw BadInstructionException(inst);
     }
 
-    setReg(getRd(inst), m_pc + 4);
-    m_pc = static_cast<std::uint32_t>(getReg(getRs1(inst)) + getImmI(inst));
+    auto rd = getRd(inst);
+    auto rs1 = getRs1(inst);
+    auto imm = getImmI(inst);
+    auto base = getReg(rs1);
+    auto address = static_cast<std::uint32_t>(base + imm);
+
+    setReg(rd, m_pc + 4);
+    m_pc = address;
     m_cycleCounter += 16;
 }
 
@@ -161,8 +164,10 @@ void Simulator::execBranchInst(std::uint32_t inst)
         BGEU = 7
     };
 
-    auto src1 = getReg(getRs1(inst));
-    auto src2 = getReg(getRs2(inst));
+    auto rs1 = getRs1(inst);
+    auto rs2 = getRs2(inst);
+    auto src1 = getReg(rs1);
+    auto src2 = getReg(rs2);
     auto offset = getImmB(inst);
     auto funct3 = static_cast<BranchFunct3>(getFunct3(inst));
 
@@ -643,7 +648,7 @@ void Simulator::store32(std::uint32_t address, std::uint32_t value)
             case 3: // Video
             {
                 bool enabled = (value & 0x80000000) != 0;
-                auto address = value & 0x01FFC0000;
+                auto address = value & 0x01FFFE000;
                 m_interface.setVideoConfig(enabled, address);
                 break;
             }

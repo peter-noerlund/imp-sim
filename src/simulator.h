@@ -43,10 +43,6 @@ private:
 
     constexpr std::int32_t getReg(std::uint8_t reg) const
     {
-        if (reg == 0 || reg == 2 || reg == 3)
-        {
-            return 0;
-        }
         if (reg > m_registers.size())
         {
             throw BadRegisterException(reg);
@@ -56,7 +52,7 @@ private:
 
     constexpr void setReg(std::uint8_t reg, std::int32_t value)
     {
-        if (reg == 0 || reg == 2 || reg == 3)
+        if (reg == 0 || reg == 3 || reg == 4)
         {
             return;
         }
