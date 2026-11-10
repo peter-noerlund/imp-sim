@@ -94,40 +94,70 @@ private:
 
     static constexpr std::int32_t getImmJ(std::uint32_t inst) noexcept
     {
+        // 3322 2222 2222 1111 1111 11
+        // 1098 7654 3210 9876 5432 1098 7654 3210
+        // daaa aaaa aaab cccc cccc ---- ---- ----
+        //
+        // a = imm[10:1]
+        // b = imm[11]
+        // c = imm[19:12]
+        // d = imm[20] (sign bit)
+
         return signExtend(
                 inst,
-                0xFFF00000,
-                ((inst >> 20)        & 0x000003FE) |
-                ((inst >> 9)         & 0x00000700) |
-                (inst                & 0x000FF000) |
-                ((inst & 0x80000000) ? 0xFFF00000 : 0x0));
+                0xFFF00000,                             // xxxx xxxx xxxx ---- ---- ---- ---- ----
+                ((inst >> (21 - 1))  & 0x000007FE) |    // ---- ---- ---- ---- ---- -xxx xxxx xxx0
+                ((inst >> (20 - 11)) & 0x00000800) |    // ---- ---- ---- ---- ---- x--- ---- ----
+                (inst                & 0x000FF000);     // ---- ---- ---- xxxx xxxx ---- ---- ----
     }
 
     static constexpr std::int32_t getImmI(std::uint32_t inst) noexcept
     {
+        // 3322 2222 2222 1111 1111 11
+        // 1098 7654 3210 9876 5432 1098 7654 3210
+        // aaaa aaaa aaaa ---- ---- ---- ---- ----
+        //
+        // a = imm[11:0]
+
         return signExtend(
                 inst,
-                0xFFFFF000,
-                (inst >> 20) & 0x00000FFFF);
+                0xFFFFF000,                             // xxxx xxxx xxxx xxxx xxxx ---- ---- ----
+                (inst >> 20) & 0x00000FFFF);            // ---- ---- ---- ---- ---- xxxx xxxx xxxx
     }
 
     static constexpr std::int32_t getImmB(std::uint32_t inst) noexcept
     {
+        // 3322 2222 2222 1111 1111 11
+        // 1098 7654 3210 9876 5432 1098 7654 3210
+        // dbbb bbb- ---- ---- ---- aaaa c--- ----
+        //
+        // a = imm[4:1]
+        // b = imm[10:5]
+        // c = imm[11]
+        // d = imm[12] (sign bit)
+
         return signExtend(
                 inst,
-                0xFFFFE000,
-                ((inst >> 7)  & 0x0000001E) |
-                ((inst >> 20) & 0x000007E0) |
-                ((inst << 4)  & 0x00000800));
+                0xFFFFF000,                             // xxxx xxxx xxxx xxxx xxxx ---- ---- ----
+                ((inst >> (8 - 1))  & 0x0000001E) |     // ---- ---- ---- ---- ---- ---- ---x xxx0
+                ((inst >> (25 - 5)) & 0x000007E0) |     // ---- ---- ---- ---- ---- -xxx xxx- ----
+                ((inst << 4)        & 0x00000800));     // ---- ---- ---- ---- ---- x--- ---- ----
     }
 
     static constexpr std::int32_t getImmS(std::uint32_t inst) noexcept
     {
+        // 3322 2222 2222 1111 1111 11
+        // 1098 7654 3210 9876 5432 1098 7654 3210
+        // bbbb bbb- ---- ---- ---- aaaa a--- ----
+        //
+        // a = imm[4:0]
+        // b = imm[11:5]
+
         return signExtend(
                 inst,
-                0xFFFFF000,
-                ((inst >> 7) & 0x01F) |
-                ((inst >> 2) & 0xFE0));
+                0xFFFFF000,                             // xxxx xxxx xxxx xxxx xxxx ---- ---- ----
+                ((inst >> 7)        & 0x0000001F) |     // ---- ---- ---- ---- ---- ---- ---x xxxx
+                ((inst >> (25 - 5)  & 0x00000FE0));     // ---- ---- ---- ---- ---- xxxx xxx- ----
     }
 
     static constexpr std::uint8_t getFunct3(std::uint32_t inst) noexcept
