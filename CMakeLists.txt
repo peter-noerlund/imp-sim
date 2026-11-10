@@ -4,6 +4,7 @@ list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
 project(imp-sim LANGUAGES CXX)
 
+find_package(stb CONFIG REQUIRED)
 find_package(X11)
 
 add_executable(imp-sim
@@ -29,3 +30,12 @@ if(X11_FOUND)
     target_include_directories(imp-sim PRIVATE ${X11_INCLUDE_DIR})
     target_link_libraries(imp-sim PRIVATE ${X11_LIBRARIES})
 endif()
+
+add_executable(encode-image tools/encode_image.cpp)
+target_compile_features(encode-image PRIVATE cxx_std_23)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(encode-image PRIVATE -Wall -W -Wextra -Wpedantic)
+endif()
+target_compile_definitions(encode-image PRIVATE STB_IMAGE_IMPLEMENTATION)
+target_link_libraries(encode-image PRIVATE stb::stb)
+
