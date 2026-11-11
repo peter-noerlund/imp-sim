@@ -38,28 +38,21 @@ private:
         MTVAL = 0x343       // Machine Trap Value. Stores offending address in case of trap
     };
 
-    // So to get timer interrupts, you would need to set mstatus.MIE to 1 (to enable interrupts globally) and mie[7] to 1 (to enable timer interrupts)
-    // When interrupts happens, mstatus.mpie is set to m
+    static constexpr std::uint32_t s_mstatusMIE  = 0x00000008;  // Machine Interrupt Enable
+    static constexpr std::uint32_t s_mstatusMPIE = 0x00000080;  // Machine Previous Interrupt Enable
+    static constexpr std::uint32_t s_mstatusMPP  = 0x00001800;
+    static constexpr std::uint32_t s_mstatusWriteMask = s_mstatusMIE | s_mstatusMPIE;
 
-    enum Interrupts : std::uint32_t
-    {
-        TimerInterrupt = 1 << 7
-    };
+    static constexpr std::uint32_t s_mieMTIE = 0x00000080;      // Machine Timer Interrupt Enable
+    static constexpr std::uint32_t s_mieWriteMask = s_mieMTIE;
 
-    enum MStatusFlags : std::uint32_t
-    {
-        MSTATUS_INTERRUPT = 0x80000000,
-    };
-
-    enum MieFlags : std::uint32_t
-    {
-        MTIE = 1 << 7   // Machine Timer Interrupt Enable
-    };
-
-    enum McauseFlags : std::uint32_t
-    {
-        MachineTimerINterrupt = 1 << 7
-    };
+    static constexpr std::uint32_t s_mcauseInterrupt = 0x80000000;  // Interrupt cause
+    static constexpr std::uint32_t s_mcauseTimer = 7;
+    static constexpr std::uint32_t s_mcauseBreakpoint = 3;
+    static constexpr std::uint32_t s_mcauseLoadAddressMisalign = 4;
+    static constexpr std::uint32_t s_mcauseStoreAddressMisalign = 6;
+    static constexpr std::uint32_t s_mcauseEnvironmentCall = 11;
+    static constexpr std::uint32_t s_mcauseWriteMask = s_mcauseInterrupt | s_mcauseTimer | s_mcauseBreakpoint | s_mcauseLoadAddressMisalign | s_mcauseStoreAddressMisalign | s_mcauseEnvironmentCall;
 
     void executeInstruction();
 
@@ -210,6 +203,10 @@ private:
 
     std::array<std::int32_t, 16> m_registers = {};
     std::uint32_t m_pc = 0;
+    std::uint32_t m_mstatus = s_mstatusMPP;
+    std::uint32_t m_mie = 0;
+    std::uint32_t m_mepc = 0;
+    std::uint32_t m_mcause = 0;
     bool m_interruptEnable = false;
     bool m_prevInterruptEnable = false;
     bool m_timerInterruptEnable = false;

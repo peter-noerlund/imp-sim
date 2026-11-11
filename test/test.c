@@ -16,6 +16,28 @@ void interrupt_handler()
     g_devices[0] = 500000;
 }
 
+inline void setCsrFlags(uint16_t csr, uint32_t flags)
+{
+    __asm__ volatile ("csrs %0, %1" : : "i"(csr), "r"(flags));
+}
+
+inline void clearCsrFlags(uint16_t csr, uint32_t flags)
+{
+    __asm__ volatile ("csrc %0, %1" : : "i"(csr), "r"(flags));
+}
+
+inline void setCsr(uint32_t csr, uint32_t flags)
+{
+    __asm__ volatile ("csrw %0, %1" : : "i"(csr), "r"(flags));
+}
+
+#define CSR_MSTATUS 0x300
+#define CSR_MIE 0x304
+#define CSR_MTVEC 0x305
+
+#define MSTATUS_MIE 0x8
+#define MIE_TIMER 0x80
+
 int main()
 {
     uint32_t* unaligned_buffer = (uint32_t*)malloc(64 * 128 * 2);
@@ -31,6 +53,10 @@ int main()
     uint8_t current_color = color;
 
     g_devices[3] = (uint32_t)video_buffer | 0x80000000;
+
+    setCsr(CSR_MTVEC, 0x00000004); // Just for show - it is hardcoded
+    setCsrFlags(CSR_MIE, MIE_TIMER);
+    setCsrFlags(CSR_MSTATUS, MSTATUS_MIE);
 
     for (;;)
     {

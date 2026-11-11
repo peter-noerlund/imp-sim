@@ -34,13 +34,14 @@ void Simulator::run(bool realTime)
     m_pc = 0;
     while (true)
     {
-        if (!m_interrupted && m_interruptCycle != 0 && m_cycleCounter > m_interruptCycle)
+        if ((m_mstatus & s_mstatusMIE) != 0 && (m_mie & s_mieMTIE) != 0 && m_cycleCounter > m_interruptCycle)
         {
-            m_mstatus = 0x80000
             m_interruptCycle = 0;
-            m_meip = m_pc;
+
+            m_mstatus = s_mstatusMPP | s_mstatusMPIE;
+            m_mcause = s_mcauseInterrupt | s_mcauseTimer;
+            m_mepc = m_pc;
             m_pc = 4;
-            m_interrupted = true;
         }
         executeInstruction();
 
@@ -535,8 +536,8 @@ void Simulator::execSystemInst(std::uint32_t inst)
             if (rs1OrImm == 0 && rd == 0 && csrOrFunc == 0x302)
             {
                 // MRET
-                m_interrupted = false;
-                m_pc = m_meip;
+                m_mstatus = s_mstatusMPP | ((m_mstatus & s_mstatusMPIE) == 0 ? 0 : s_mstatusMIE);
+                m_pc = m_mepc;
                 m_cycleCounter += 16; // ?
                 return;
             }
@@ -574,7 +575,7 @@ void Simulator::execSystemInst(std::uint32_t inst)
         {
             if (rd != 0)
             {
-                setReg(getCsr(csrOrFunc));
+                setReg(rd, getCsr(csrOrFunc));
             }
             setCsr(csrOrFunc, rs1OrImm);
             break;
@@ -675,7 +676,7 @@ std::uint32_t Simulator::getCsr(std::uint16_t csr)
             return m_mcause;
 
         case CsrReg::MTVAL:
-            return m_mtval;
+            return 0;
     }
 
     return 0;
@@ -686,11 +687,12 @@ void Simulator::setCsr(std::uint16_t csr, std::uint32_t value)
     switch (static_cast<CsrReg>(csr))
     {
         case CsrReg::MSTATUS:
+            m_mstatus = (m_mstatus & ~s_mstatusWriteMask) | (value & s_mstatusWriteMask);
             return;
 
         case CsrReg::MIE:
-            m_mie = value & 0x00000008;
-            return
+            m_mie = (m_mie & ~s_mieWriteMask) | (value & s_mieWriteMask);
+            return;
 
         case CsrReg::MTVEC:
             return;
@@ -703,7 +705,7 @@ void Simulator::setCsr(std::uint16_t csr, std::uint32_t value)
             break;
 
         case CsrReg::MCAUSE:
-            m_mcause = value & 0x8000000F;
+            m_mcause = (m_mcause & ~s_mcauseWriteMask) | (value & s_mcauseWriteMask);
             break;
 
         case CsrReg::MTVAL:
