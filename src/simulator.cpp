@@ -1,5 +1,6 @@
 #include "simulator.h"
 
+#include "audio_interface.h"
 #include "bad_instruction_exception.h"
 #include "executable.h"
 #include "interface.h"
@@ -13,11 +14,18 @@
 namespace imp_sim
 {
 
-Simulator::Simulator(Executable& executable, Interface& interface)
+Simulator::Simulator(Executable& executable, Interface& interface, AudioInterface& audioInterface)
     : m_executable(executable)
     , m_interface(interface)
+    , m_audioInterface(audioInterface)
     , m_ram(8 * 1024 * 1024)
 {
+}
+
+Simulator::~Simulator()
+{
+    m_interface.stop();
+    m_audioInterface.playFrequency(0);
 }
 
 void Simulator::run(bool realTime)
@@ -61,6 +69,7 @@ void Simulator::run(bool realTime)
     }
 
     m_interface.stop();
+    m_audioInterface.playFrequency(0);
 }
 
 void Simulator::executeInstruction()
@@ -772,7 +781,7 @@ void Simulator::store32(std::uint32_t address, std::uint32_t value)
                 break;
 
             case 2: // Audio
-                // TODO
+                m_audioInterface.playFrequency(65000000.0 / static_cast<float>(value & 0x0003FFFC));
                 break;
 
             case 3: // Video
@@ -785,6 +794,5 @@ void Simulator::store32(std::uint32_t address, std::uint32_t value)
         }
     }
 }
-
 
 } // namespace imp_sim

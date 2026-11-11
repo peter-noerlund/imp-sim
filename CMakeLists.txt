@@ -4,6 +4,7 @@ list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
 project(imp-sim LANGUAGES CXX)
 
+find_package(ALSA)
 find_package(stb CONFIG REQUIRED)
 find_package(X11)
 
@@ -12,6 +13,7 @@ add_executable(imp-sim
     src/bad_register_exception.cpp
     src/executable.cpp
     src/main.cpp
+    src/none_audio_interface.cpp
     src/none_interface.cpp
     src/simulation_exception.cpp
     src/simulator.cpp
@@ -29,6 +31,12 @@ if(X11_FOUND)
     target_compile_definitions(imp-sim PRIVATE HAVE_X11)
     target_include_directories(imp-sim PRIVATE ${X11_INCLUDE_DIR})
     target_link_libraries(imp-sim PRIVATE ${X11_LIBRARIES})
+endif()
+
+if(ALSA_FOUND)
+    target_sources(imp-sim PRIVATE src/alsa_audio_interface.cpp)
+    target_compile_definitions(imp-sim PRIVATE HAVE_ALSA)
+    target_link_libraries(imp-sim PRIVATE ALSA::ALSA)
 endif()
 
 add_executable(encode-image tools/encode_image.cpp)

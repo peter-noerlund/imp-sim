@@ -9,13 +9,15 @@
 namespace imp_sim
 {
 
+class AudioInterface;
 class Executable;
 class Interface;
 
 class Simulator
 {
 public:
-    Simulator(Executable& executable, Interface& interface);
+    Simulator(Executable& executable, Interface& interface, AudioInterface& audioInterface);
+    ~Simulator();
 
     void run(bool realTime);
 
@@ -217,6 +219,7 @@ private:
 
     Executable& m_executable;
     Interface& m_interface;
+    AudioInterface& m_audioInterface;
     std::vector<std::uint8_t> m_ram;
 };
 

@@ -1,17 +1,34 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#define DEVICE_TIMER 0
+#define DEVICE_INPUT 1
+#define DEVICE_AUDIO 2
+#define DEVICE_VIDEO 3
+
 static volatile uint32_t* g_devices = (volatile uint32_t*)0x02000000;
 
 volatile uint8_t color = 0x00;
 
 unsigned int g_counter = 0;
+unsigned int play = 0;
 
 void interrupt_handler()
 {
     if (g_counter++ % 128 == 0)
     {
         color = (color + 1) & 0x3F;
+
+        if (play)
+        {
+            g_devices[DEVICE_AUDIO] = 65000000 / 2 / 440;
+            play = 0;
+        }
+        else
+        {
+            g_devices[DEVICE_AUDIO] = 65000000 / 2 / 880;
+            play = 1;
+        }
     }
     g_devices[0] = 500000;
 }
@@ -52,7 +69,7 @@ int main()
 
     uint8_t current_color = color;
 
-    g_devices[3] = (uint32_t)video_buffer | 0x80000000;
+    g_devices[DEVICE_VIDEO] = (uint32_t)video_buffer | 0x80000000;
 
     setCsr(CSR_MTVEC, 0x00000004); // Just for show - it is hardcoded
     setCsrFlags(CSR_MIE, MIE_TIMER);
@@ -71,7 +88,7 @@ int main()
             }
         }
 
-        g_devices[0] = 500000;
+        g_devices[DEVICE_TIMER] = 500000;
 
         while (current_color == color);
     }
