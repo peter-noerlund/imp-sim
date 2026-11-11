@@ -29,19 +29,36 @@ public:
 private:
     enum class CsrReg : std::uint16_t
     {
-        MSTATUS = 0x300,
-        MIE = 0x304,
-        MTVEC = 0x305,
-        MSCRATCH = 0x340,
-        MEPC = 0x341,
-        MCAUSE = 0x342,
-        MTVAL = 0x343
+        MSTATUS = 0x300,    // Machine Status. mstatus[3] is MIE (Machine Interrupt Enable) and mstatus[7] is MPIE (Machine Previous Interrupt Enable)
+        MIE = 0x304,        // Machine Interrupt Enable mask. mie[7] is machine timer interrupt
+        MTVEC = 0x305,      // Machine Trap Vector Base. Stores base address of interrupt vectors (which can be either a list or a single address)
+        MSCRATCH = 0x340,   // Scratch register for interrupts/traps
+        MEPC = 0x341,       // Machine Exception PC. Stores return address for interrupt/trap
+        MCAUSE = 0x342,     // Machine Cause. Stores cause of interrupt/trap. mstatus[31] is interrupt indicator, mstatus[7] is machine timer interrupt
+        MTVAL = 0x343       // Machine Trap Value. Stores offending address in case of trap
+    };
+
+    // So to get timer interrupts, you would need to set mstatus.MIE to 1 (to enable interrupts globally) and mie[7] to 1 (to enable timer interrupts)
+    // When interrupts happens, mstatus.mpie is set to m
+
+    enum Interrupts : std::uint32_t
+    {
+        TimerInterrupt = 1 << 7
     };
 
     enum MStatusFlags : std::uint32_t
     {
         MSTATUS_INTERRUPT = 0x80000000,
-        MSTATUS_TIMER_INTE
+    };
+
+    enum MieFlags : std::uint32_t
+    {
+        MTIE = 1 << 7   // Machine Timer Interrupt Enable
+    };
+
+    enum McauseFlags : std::uint32_t
+    {
+        MachineTimerINterrupt = 1 << 7
     };
 
     void executeInstruction();
@@ -193,11 +210,10 @@ private:
 
     std::array<std::int32_t, 16> m_registers = {};
     std::uint32_t m_pc = 0;
-    std::uint32_t m_mstatus = 0;
-    std::uint32_t m_mie = 0;
-    std::uint32_t m_mepc = 0;
-    std::uint32_t m_mcause = 0;
-    std::uint32_t m_mtval = 0;
+    bool m_interruptEnable = false;
+    bool m_prevInterruptEnable = false;
+    bool m_timerInterruptEnable = false;
+    bool m_timerInterrupted = false;
     unsigned long long int m_interruptCycle = 0;
     unsigned long long int m_cycleCounter = 0;
     bool m_interrupted = false;
