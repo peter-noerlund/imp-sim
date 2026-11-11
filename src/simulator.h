@@ -27,6 +27,23 @@ public:
     void store32(std::uint32_t address, std::uint32_t value);
 
 private:
+    enum class CsrReg : std::uint16_t
+    {
+        MSTATUS = 0x300,
+        MIE = 0x304,
+        MTVEC = 0x305,
+        MSCRATCH = 0x340,
+        MEPC = 0x341,
+        MCAUSE = 0x342,
+        MTVAL = 0x343
+    };
+
+    enum MStatusFlags : std::uint32_t
+    {
+        MSTATUS_INTERRUPT = 0x80000000,
+        MSTATUS_TIMER_INTE
+    };
+
     void executeInstruction();
 
     void execLuiInst(std::uint32_t inst);
@@ -40,6 +57,9 @@ private:
     void execOpInst(std::uint32_t inst);
     void execMiscMemInst(std::uint32_t inst);
     void execSystemInst(std::uint32_t inst);
+
+    std::uint32_t getCsr(std::uint16_t csr);
+    void setCsr(std::uint16_t csr, std::uint32_t value);
 
     constexpr std::int32_t getReg(std::uint8_t reg) const
     {
@@ -173,7 +193,11 @@ private:
 
     std::array<std::int32_t, 16> m_registers = {};
     std::uint32_t m_pc = 0;
-    std::uint32_t m_meip = 0;
+    std::uint32_t m_mstatus = 0;
+    std::uint32_t m_mie = 0;
+    std::uint32_t m_mepc = 0;
+    std::uint32_t m_mcause = 0;
+    std::uint32_t m_mtval = 0;
     unsigned long long int m_interruptCycle = 0;
     unsigned long long int m_cycleCounter = 0;
     bool m_interrupted = false;

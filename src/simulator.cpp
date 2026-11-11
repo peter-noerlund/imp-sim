@@ -36,6 +36,7 @@ void Simulator::run(bool realTime)
     {
         if (!m_interrupted && m_interruptCycle != 0 && m_cycleCounter > m_interruptCycle)
         {
+            m_mstatus = 0x80000
             m_interruptCycle = 0;
             m_meip = m_pc;
             m_pc = 4;
@@ -525,18 +526,19 @@ void Simulator::execSystemInst(std::uint32_t inst)
 
     auto funct3 = static_cast<SystemFunct3>(getFunct3(inst));
     auto csrOrFunc = getFunct12(inst);
-    auto rs1 = getRs1(inst);
+    auto rs1OrImm = getRs1(inst);
     auto rd = getRd(inst);
 
     switch (funct3)
     {
         case SystemFunct3::PRIV:
-            if (rs1 == 0 && rd == 0 && csrOrFunc == 0x302)
+            if (rs1OrImm == 0 && rd == 0 && csrOrFunc == 0x302)
             {
                 // MRET
                 m_interrupted = false;
                 m_pc = m_meip;
                 m_cycleCounter += 16; // ?
+                return;
             }
             else
             {
@@ -544,20 +546,62 @@ void Simulator::execSystemInst(std::uint32_t inst)
             }
             break;
 
-        case SystemFunct3::CSRRW:
-        case SystemFunct3::CSRRS:
-        case SystemFunct3::CSRRC:
-        case SystemFunct3::CSRRWI:
-        case SystemFunct3::CSRRSI:
-        case SystemFunct3::CSRRCI:
-            setReg(rd, csrOrFunc == 0x305 ? 4 : 0);
-            m_pc += 4;
-            m_cycleCounter += 8;
+        case SystemFunct3::CSRRW:   // CSR Read and Write (register)
+            if (rd != 0)
+            {
+                setReg(rd, getCsr(csrOrFunc));
+            }
+            setCsr(csrOrFunc, getReg(rs1OrImm));
             break;
+
+        case SystemFunct3::CSRRS:   // CSR Read and Set (register)
+        {
+            auto val = getCsr(csrOrFunc);
+            setReg(rd, val);
+            setCsr(csrOrFunc, val | getReg(rs1OrImm));
+            break;
+        }
+
+        case SystemFunct3::CSRRC:   // CSR Read and Clear (register)
+        {
+            auto val = getCsr(csrOrFunc);
+            setReg(rd, val);
+            setCsr(csrOrFunc, val & ~getReg(rs1OrImm));
+            break;
+        }
+
+        case SystemFunct3::CSRRWI:  // CSR Read and Write (immediate)
+        {
+            if (rd != 0)
+            {
+                setReg(getCsr(csrOrFunc));
+            }
+            setCsr(csrOrFunc, rs1OrImm);
+            break;
+        }
+
+        case SystemFunct3::CSRRSI:  // CSR Read and Set (immediate)
+        {
+            auto val = getCsr(csrOrFunc);
+            setReg(rd, val);
+            setCsr(csrOrFunc, val | rs1OrImm);
+            break;
+        }
+
+        case SystemFunct3::CSRRCI:  // CSR Read and Clear (immediate)
+        {
+            auto val = getCsr(csrOrFunc);
+            setReg(rd, val);
+            setCsr(csrOrFunc, val & ~rs1OrImm);
+            break;
+        }
 
         default:
             throw BadInstructionException(inst);
     }
+            
+    m_pc += 4;
+    m_cycleCounter += 8;
 }
 
 std::uint8_t Simulator::load8(std::uint32_t address) const
@@ -606,6 +650,67 @@ std::uint32_t Simulator::load32(std::uint32_t address) const
     {
         return 0;
     }
+}
+
+std::uint32_t Simulator::getCsr(std::uint16_t csr)
+{
+    switch (static_cast<CsrReg>(csr))
+    {
+        case CsrReg::MSTATUS:
+            return m_mstatus;
+
+        case CsrReg::MIE:
+            return m_mie;
+
+        case CsrReg::MTVEC:
+            return 4;
+
+        case CsrReg::MSCRATCH:
+            return 0;
+
+        case CsrReg::MEPC:
+            return m_mepc;
+
+        case CsrReg::MCAUSE:
+            return m_mcause;
+
+        case CsrReg::MTVAL:
+            return m_mtval;
+    }
+
+    return 0;
+}
+
+void Simulator::setCsr(std::uint16_t csr, std::uint32_t value)
+{
+    switch (static_cast<CsrReg>(csr))
+    {
+        case CsrReg::MSTATUS:
+            return;
+
+        case CsrReg::MIE:
+            m_mie = value & 0x00000008;
+            return
+
+        case CsrReg::MTVEC:
+            return;
+
+        case CsrReg::MSCRATCH:
+            return;
+
+        case CsrReg::MEPC:
+            m_mepc = value;
+            break;
+
+        case CsrReg::MCAUSE:
+            m_mcause = value & 0x8000000F;
+            break;
+
+        case CsrReg::MTVAL:
+            return;
+    }
+
+    return;
 }
 
 void Simulator::store8(std::uint32_t address, std::uint8_t value)

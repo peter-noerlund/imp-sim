@@ -10,6 +10,7 @@ _init:
     .section .text
 
 _interrupt_handler:
+    ; gp is hardcoded to 0x01000400 and the range 0x01000000 - 0x010007FF is reserved for this purpose
     sw x1, -1024(gp)
     sw x2, -1020(gp)
     sw x5, -1016(gp)
