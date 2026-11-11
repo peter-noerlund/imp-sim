@@ -41,7 +41,7 @@ int main()
         {
             for (int x = 0; x != 16; ++x)
             {
-                video_buffer[y * 16 + x] = pixels * g_counter;
+                video_buffer[y * 16 + x] = pixels;
             }
         }
 
