@@ -787,7 +787,7 @@ void Simulator::store32(std::uint32_t address, std::uint32_t value)
             case 3: // Video
             {
                 bool enabled = (value & 0x80000000) != 0;
-                auto address = value & 0x01FFFE000;
+                auto address = value & 0x1FFFE000;
                 m_interface.setVideoConfig(enabled, address);
                 break;
             }
