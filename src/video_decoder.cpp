@@ -5,74 +5,26 @@ namespace imp_sim
 
 std::array<std::uint8_t, 8> VideoDecoder::decode(std::uint32_t chunk) noexcept
 {
-    enum class PixelGroup : std::uint8_t
-    {
-        BlackBlack = 0,
-        BlackColor1 = 1,
-        BlackColor2 = 2,
-        Color1Black = 3,
-        Color1Color1 = 4,
-        Color1Color2 = 5,
-        Color2Black = 6,
-        Color2Color2 = 7
-    };
+    std::uint8_t c2 = (chunk >> 24) & 0x3F;
+    std::uint8_t c1 = (chunk >> 16) & 0x3F;
+    
+    std::uint8_t r1 = c1 >> 4;
+    std::uint8_t g1 = (c1 >> 2) & 0x03;
+    std::uint8_t b1 = c1 & 0x03;
+    std::uint8_t r2 = c2 >> 4;
+    std::uint8_t g2 = (c2 >> 2) & 0x03;
+    std::uint8_t b2 = c2 & 0x03;
+    std::uint8_t r3 = (r1 + r2) >> 1;
+    std::uint8_t g3 = (g1 + g2) >> 1;
+    std::uint8_t b3 = (b1 + b2) >> 1;
+    std::uint8_t c3 = (r3 << 4) | (g3 << 2) | b3;
 
-    auto c2 = static_cast<std::uint8_t>(chunk >> 24) & 0x3F;
-    auto c1 = static_cast<std::uint8_t>(chunk >> 16) & 0x3F;
-    std::array<PixelGroup, 4> groups = {
-        static_cast<PixelGroup>(chunk & 0x7),
-        static_cast<PixelGroup>((chunk >> 4) & 0x07),
-        static_cast<PixelGroup>((chunk >> 8) & 0x07),
-        static_cast<PixelGroup>((chunk >> 12) & 0x07)
-    };
-
+    std::array<std::uint8_t, 4> colors = {0, c1, c2, c3};
     std::array<std::uint8_t, 8> pixels;
-    for (std::size_t i = 0; i != groups.size(); ++i)
+
+    for (int i = 0; i != 8; ++i)
     {
-        auto group = static_cast<PixelGroup>(groups[i]);
-
-        switch (group)
-        {
-            case PixelGroup::BlackBlack:
-                pixels[i * 2] = 0;
-                pixels[i * 2 + 1] = 0;
-                break;
-
-            case PixelGroup::BlackColor1:
-                pixels[i * 2] = c1;
-                pixels[i * 2 + 1] = 0;
-                break;
-
-            case PixelGroup::BlackColor2:
-                pixels[i * 2] = c2;
-                pixels[i * 2 + 1] = 0;
-                break;
-
-            case PixelGroup::Color1Black:
-                pixels[i * 2] = 0;
-                pixels[i * 2 + 1] = c1;
-                break;
-
-            case PixelGroup::Color1Color1:
-                pixels[i * 2] = c1;
-                pixels[i * 2 + 1] = c1;
-                break;
-
-            case PixelGroup::Color1Color2:
-                pixels[i * 2] = c2;
-                pixels[i * 2 + 1] = c2;
-                break;
-
-            case PixelGroup::Color2Black:
-                pixels[i * 2] = 0;
-                pixels[i * 2 + 1] = c2;
-                break;
-
-            case PixelGroup::Color2Color2:
-                pixels[i * 2] = c2;
-                pixels[i * 2 + 1] = c2;
-                break;
-        }
+        pixels[i] = colors[(chunk >> (i * 2)) & 0x03];
     }
 
     return pixels;

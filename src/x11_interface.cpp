@@ -188,6 +188,8 @@ void X11Interface::render(std::span<std::uint32_t> bitmap)
     constexpr auto height = 96;
     constexpr auto scale = 1024 / width;
 
+    static const auto mapping = std::to_array<std::uint8_t>({0, 85, 170, 255});
+
     for (unsigned int y = 0; y != height; ++y)
     {
         for (unsigned int x = 0; x != width; x += 8)
@@ -201,9 +203,9 @@ void X11Interface::render(std::span<std::uint32_t> bitmap)
             {
                 auto pixel = pixels[p];
                 uint32_t color8888 =
-                    (static_cast<std::uint32_t>(pixel & 0x30) << 18) |
-                    (static_cast<std::uint32_t>(pixel & 0x0C) << 12) |
-                    (static_cast<std::uint32_t>(pixel & 0x03) << 6);
+                    (static_cast<std::uint32_t>(mapping[pixel >> 4]) << 16) |
+                    (static_cast<std::uint32_t>(mapping[(pixel >> 2) & 0x3]) << 8) |
+                     static_cast<std::uint32_t>(mapping[pixel & 0x3]);
 
                 for (unsigned int cy = 0; cy != scale; ++cy)
                 {
