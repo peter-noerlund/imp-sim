@@ -3,6 +3,7 @@
 #include "audio_interface.h"
 #include "bad_instruction_exception.h"
 #include "executable.h"
+#include "instruction_hook.h"
 #include "interface.h"
 #include "simulation_exception.h"
 
@@ -28,6 +29,11 @@ Simulator::~Simulator()
     m_audioInterface.playFrequency(0);
 }
 
+void Simulator::addHook(InstructionHook& hook)
+{
+    m_instructionHooks.push_back(&hook);
+}
+
 void Simulator::run(bool realTime)
 {
     using namespace std::chrono_literals;
@@ -51,6 +57,7 @@ void Simulator::run(bool realTime)
             m_mepc = m_pc;
             m_pc = 4;
         }
+
         executeInstruction();
 
         if (realTime && m_cycleCounter >= nextAdjustment)
@@ -89,7 +96,8 @@ void Simulator::executeInstruction()
         SYSTEM = 0x73
     };
 
-    std::uint32_t inst = load32(m_pc);
+    auto pc = m_pc;
+    std::uint32_t inst = load32(pc);
 
     m_cycleCounter += 56;
 
@@ -142,6 +150,11 @@ void Simulator::executeInstruction()
 
         default:
             throw BadInstructionException(inst);
+    }
+
+    for (auto hook : m_instructionHooks)
+    {
+        hook->postInstruction(pc, inst, m_cycleCounter);
     }
 }
 

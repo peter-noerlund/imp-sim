@@ -1,5 +1,7 @@
 #include "executable.h"
 #include "audio_interface.h"
+#include "function_profiler.h"
+#include "instruction_hook.h"
 #include "interface.h"
 #include "none_audio_interface.h"
 #include "none_interface.h"
@@ -38,47 +40,94 @@ int main(int argc, char** argv)
     audioInterfaceName = "none";
 #endif // HAVE_ALSA
 
+    std::string_view functionProfileFile;
+
     std::string_view executableFile;
-    bool realTime = true;
+    bool fast = false;
+    bool help = false;
+
+    struct StringArgument
+    {
+        std::string_view arg;
+        std::variant<std::string_view*, bool*> value;
+    };
+    const auto arguments = std::to_array<StringArgument>({
+        {"--interface", &interfaceName},
+        {"--audio-interface", &audioInterfaceName},
+        {"--function-profile", &functionProfileFile},
+        {"--fast", &fast},
+        {"-h", &help},
+        {"--help", &help}
+    });
+
 
     for (int i = 1; i < argc; ++i)
     {
         std::string_view arg = argv[i];
-        if (arg.starts_with("--interface="))
-        {
-            interfaceName = arg.substr(12);
-        }
-        else if (arg.starts_with("--audio-interface="))
-        {
-            audioInterfaceName = arg.substr(18);
-        }
-        else if (arg == "--fast")
-        {
-            realTime = false;
-        }
-        else if (arg == "-h" || arg == "--help")
-        {
-            std::string interfaceTypes = "none|tty";
-#ifdef HAVE_X11
-            interfaceTypes += "|x11";
-#endif // HAVE_X11
-            
-            std::string audioInterfaceTypes = "none";
-#ifdef HAVE_ALSA
-            audioInterfaceTypes += "|alsa";
-#endif // HAVE_ALSA
 
-            std::println("Usage: imp-sim [--interface={}] [--audio-interface={}] [--fast] EXECUTABLE", interfaceTypes, audioInterfaceTypes);
-        }
-        else if (arg.starts_with("-"))
+        if (arg.starts_with("-"))
         {
-            std::println(stderr, "Invalid argument: {}", arg);
-            return EXIT_FAILURE;
+            bool match = false;
+            for (const auto& argument : arguments)
+            {
+                if (std::holds_alternative<bool*>(argument.value))
+                {
+                    if (arg == argument.arg)
+                    {
+                        *std::get<bool*>(argument.value) = true;
+                        match = true;
+                        break;
+                    }
+                }
+                else if (std::holds_alternative<std::string_view*>(argument.value))
+                {
+                    auto ptr = std::get<std::string_view*>(argument.value);
+                    std::string_view value;
+                    if (arg == argument.arg)
+                    {
+                        if (i + 1 == argc)
+                        {
+                            throw std::invalid_argument(std::format("Missing value for argument: {}", arg));
+                        }
+                        *ptr = argv[++i];
+                        match = true;
+                        break;
+                    }
+                    else if (arg.starts_with(argument.arg) && arg.size() > argument.arg.size() && arg[argument.arg.size()] == '=')
+                    {
+                        *ptr = arg.substr(argument.arg.size() + 1);
+                        match = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!match)
+            {
+                throw std::invalid_argument(std::format("Invalid argument: {}", arg));
+            }
         }
         else
         {
             executableFile = arg;
         }
+    }
+
+    if (help)
+    {
+        std::string interfaceTypes = "none|tty";
+#ifdef HAVE_X11
+        interfaceTypes += "|x11";
+#endif // HAVE_X11
+        
+        std::string audioInterfaceTypes = "none";
+#ifdef HAVE_ALSA
+        audioInterfaceTypes += "|alsa";
+#endif // HAVE_ALSA
+
+        std::println("Usage: imp-sim [--interface={}] [--audio-interface={}] [--fast] [--function-profile=FILE] EXECUTABLE", interfaceTypes, audioInterfaceTypes);
+
+        return EXIT_SUCCESS;
     }
 
     if (executableFile.empty())
@@ -129,7 +178,18 @@ int main(int argc, char** argv)
         Executable executable(executableFile);
 
         Simulator simulator(executable, *interface, *audioInterface);
-        simulator.run(realTime);
+
+        std::vector<std::unique_ptr<InstructionHook>> hooks;
+        if (!functionProfileFile.empty())
+        {
+            hooks.push_back(std::make_unique<FunctionProfiler>(executable, functionProfileFile));
+        }
+        for (auto& hook : hooks)
+        {
+            simulator.addHook(*hook);
+        }
+
+        simulator.run(!fast);
 
         return EXIT_SUCCESS;
     }

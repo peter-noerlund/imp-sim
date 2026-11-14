@@ -11,6 +11,7 @@ namespace imp_sim
 
 class AudioInterface;
 class Executable;
+class InstructionHook;
 class Interface;
 
 class Simulator
@@ -20,6 +21,8 @@ public:
     ~Simulator();
 
     void run(bool realTime);
+
+    void addHook(InstructionHook& hook);
 
     std::uint8_t load8(std::uint32_t address) const;
     std::uint16_t load16(std::uint32_t address) const;
@@ -220,6 +223,7 @@ private:
     Executable& m_executable;
     Interface& m_interface;
     AudioInterface& m_audioInterface;
+    std::vector<InstructionHook*> m_instructionHooks;
     std::vector<std::uint8_t> m_ram;
 };
 
