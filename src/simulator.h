@@ -59,7 +59,7 @@ private:
     static constexpr std::uint32_t s_mcauseEnvironmentCall = 11;
     static constexpr std::uint32_t s_mcauseWriteMask = s_mcauseInterrupt | s_mcauseTimer | s_mcauseBreakpoint | s_mcauseLoadAddressMisalign | s_mcauseStoreAddressMisalign | s_mcauseEnvironmentCall;
 
-    void executeInstruction();
+    void executeInstruction(bool interrupt);
 
     void execLuiInst(std::uint32_t inst);
     void execAuipcInst(std::uint32_t inst);

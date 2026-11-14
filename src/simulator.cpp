@@ -48,6 +48,7 @@ void Simulator::run(bool realTime)
     m_pc = 0;
     while (true)
     {
+        bool interrupt = false;
         if ((m_mstatus & s_mstatusMIE) != 0 && (m_mie & s_mieMTIE) != 0 && m_cycleCounter > m_interruptCycle)
         {
             m_interruptCycle = 0;
@@ -56,9 +57,10 @@ void Simulator::run(bool realTime)
             m_mcause = s_mcauseInterrupt | s_mcauseTimer;
             m_mepc = m_pc;
             m_pc = 4;
+            interrupt = true;
         }
 
-        executeInstruction();
+        executeInstruction(interrupt);
 
         if (realTime && m_cycleCounter >= nextAdjustment)
         {
@@ -79,7 +81,7 @@ void Simulator::run(bool realTime)
     m_audioInterface.playFrequency(0);
 }
 
-void Simulator::executeInstruction()
+void Simulator::executeInstruction(bool interrupt)
 {
     enum Opcode : std::uint8_t
     {
@@ -154,7 +156,7 @@ void Simulator::executeInstruction()
 
     for (auto hook : m_instructionHooks)
     {
-        hook->postInstruction(pc, inst, m_cycleCounter);
+        hook->postInstruction(pc, inst, m_cycleCounter, interrupt);
     }
 }
 

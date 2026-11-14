@@ -1,5 +1,6 @@
 #include "executable.h"
 #include "audio_interface.h"
+#include "flame_profiler.h"
 #include "function_profiler.h"
 #include "instruction_hook.h"
 #include "interface.h"
@@ -41,6 +42,7 @@ int main(int argc, char** argv)
 #endif // HAVE_ALSA
 
     std::string_view functionProfileFile;
+    std::string_view flameProfileFile;
 
     std::string_view executableFile;
     bool fast = false;
@@ -55,6 +57,7 @@ int main(int argc, char** argv)
         {"--interface", &interfaceName},
         {"--audio-interface", &audioInterfaceName},
         {"--function-profile", &functionProfileFile},
+        {"--flame-profile", &flameProfileFile},
         {"--fast", &fast},
         {"-h", &help},
         {"--help", &help}
@@ -184,6 +187,11 @@ int main(int argc, char** argv)
         {
             hooks.push_back(std::make_unique<FunctionProfiler>(executable, functionProfileFile));
         }
+        if (!flameProfileFile.empty())
+        {
+            hooks.push_back(std::make_unique<FlameProfiler>(executable, flameProfileFile));
+        }
+
         for (auto& hook : hooks)
         {
             simulator.addHook(*hook);

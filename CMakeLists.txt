@@ -12,6 +12,7 @@ add_executable(imp-sim
     src/bad_instruction_exception.cpp
     src/bad_register_exception.cpp
     src/executable.cpp
+    src/flame_profiler.cpp
     src/function_profiler.cpp
     src/main.cpp
     src/none_audio_interface.cpp

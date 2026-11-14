@@ -17,7 +17,7 @@ class FunctionProfiler : public InstructionHook
 public:
     FunctionProfiler(const Executable& executable, const std::filesystem::path& filename);
 
-    void postInstruction(std::uint32_t pc, std::uint32_t instr, unsigned long long int cycles) override;
+    void postInstruction(std::uint32_t pc, std::uint32_t instr, unsigned long long int cycles, bool interrupt) override;
 
 private:
     const Executable& m_executable;

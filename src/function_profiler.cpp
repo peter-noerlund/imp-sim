@@ -15,7 +15,7 @@ FunctionProfiler::FunctionProfiler(const Executable& executable, const std::file
     m_stream.open(filename, std::ofstream::out | std::ofstream::trunc);
 }
 
-void FunctionProfiler::postInstruction(std::uint32_t pc, std::uint32_t, unsigned long long int cycles)
+void FunctionProfiler::postInstruction(std::uint32_t pc, std::uint32_t, unsigned long long int cycles, bool)
 {
     auto symbol = m_executable.resolve(pc);
     if (symbol != m_currentSymbol)
