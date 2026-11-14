@@ -91,8 +91,6 @@ void Simulator::executeInstruction()
 
     std::uint32_t inst = load32(m_pc);
 
-    //std::println("{:x}", m_pc);
-
     m_cycleCounter += 56;
 
     auto opcode = static_cast<Opcode>(inst & 0x7F);
@@ -377,7 +375,7 @@ void Simulator::execOpImmInst(std::uint32_t inst)
             break;
 
         case OpImmFunct3::XORI:
-            value = src | imm;
+            value = src ^ imm;
             m_cycleCounter += 8;
             break;
 
