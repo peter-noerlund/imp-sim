@@ -23,6 +23,11 @@ public:
 
     std::string_view resolve(std::uint32_t address) const noexcept;
 
+    constexpr const std::map<std::uint32_t, std::string> symbols() const noexcept
+    {
+        return m_symbols;
+    }
+
 private:
     void loadBinary(std::istream& stream);
     void loadELF(std::istream& stream);

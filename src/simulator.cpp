@@ -56,7 +56,7 @@ void Simulator::run(bool realTime)
             m_mstatus = s_mstatusMPP | s_mstatusMPIE;
             m_mcause = s_mcauseInterrupt | s_mcauseTimer;
             m_mepc = m_pc;
-            m_pc = 4;
+            m_pc = 8;
             interrupt = true;
         }
 

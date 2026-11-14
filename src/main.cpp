@@ -1,3 +1,4 @@
+#include "callgrind_profiler.h"
 #include "executable.h"
 #include "audio_interface.h"
 #include "flame_profiler.h"
@@ -43,6 +44,7 @@ int main(int argc, char** argv)
 
     std::string_view functionProfileFile;
     std::string_view flameProfileFile;
+    std::string_view callgrindProfileFile;
 
     std::string_view executableFile;
     bool fast = false;
@@ -58,6 +60,7 @@ int main(int argc, char** argv)
         {"--audio-interface", &audioInterfaceName},
         {"--function-profile", &functionProfileFile},
         {"--flame-profile", &flameProfileFile},
+        {"--callgrind-profile", &callgrindProfileFile},
         {"--fast", &fast},
         {"-h", &help},
         {"--help", &help}
@@ -128,7 +131,7 @@ int main(int argc, char** argv)
         audioInterfaceTypes += "|alsa";
 #endif // HAVE_ALSA
 
-        std::println("Usage: imp-sim [--interface={}] [--audio-interface={}] [--fast] [--function-profile=FILE] EXECUTABLE", interfaceTypes, audioInterfaceTypes);
+        std::println("Usage: imp-sim [--interface={}] [--audio-interface={}] [--fast] [--function-profile=FILE] [--flame-profile=FILE] [--callgrind-profile=FILE] EXECUTABLE", interfaceTypes, audioInterfaceTypes);
 
         return EXIT_SUCCESS;
     }
@@ -190,6 +193,10 @@ int main(int argc, char** argv)
         if (!flameProfileFile.empty())
         {
             hooks.push_back(std::make_unique<FlameProfiler>(executable, flameProfileFile));
+        }
+        if (!callgrindProfileFile.empty())
+        {
+            hooks.push_back(std::make_unique<CallgrindProfiler>(executable, callgrindProfileFile));
         }
 
         for (auto& hook : hooks)
