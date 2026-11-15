@@ -11,6 +11,7 @@ find_package(X11)
 add_executable(imp-sim
     src/bad_instruction_exception.cpp
     src/bad_register_exception.cpp
+    src/callgrind_profiler.cpp
     src/executable.cpp
     src/flame_profiler.cpp
     src/function_profiler.cpp
