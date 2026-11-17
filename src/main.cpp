@@ -50,12 +50,12 @@ int main(int argc, char** argv)
     bool fast = false;
     bool help = false;
 
-    struct StringArgument
+    struct Argument
     {
         std::string_view arg;
         std::variant<std::string_view*, bool*> value;
     };
-    const auto arguments = std::to_array<StringArgument>({
+    const auto arguments = std::to_array<Argument>({
         {"--interface", &interfaceName},
         {"--audio-interface", &audioInterfaceName},
         {"--function-profile", &functionProfileFile},
