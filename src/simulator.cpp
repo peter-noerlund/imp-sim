@@ -49,7 +49,7 @@ void Simulator::run(bool realTime)
     while (true)
     {
         bool interrupt = false;
-        if ((m_mstatus & s_mstatusMIE) != 0 && (m_mie & s_mieMTIE) != 0 && m_cycleCounter > m_interruptCycle)
+        if ((m_mstatus & s_mstatusMIE) != 0 && (m_mie & s_mieMTIE) != 0 && m_cycleCounter > m_interruptCycle && m_interruptCycle != 0)
         {
             m_interruptCycle = 0;
 
