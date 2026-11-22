@@ -20,7 +20,7 @@ public:
     Simulator(Executable& executable, Interface& interface, AudioInterface& audioInterface);
     ~Simulator();
 
-    void run(bool realTime);
+    void run(bool realTime, bool trace);
 
     void addHook(InstructionHook& hook);
 

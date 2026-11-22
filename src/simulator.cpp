@@ -35,7 +35,7 @@ void Simulator::addHook(InstructionHook& hook)
     m_instructionHooks.push_back(&hook);
 }
 
-void Simulator::run(bool realTime)
+void Simulator::run(bool realTime, bool trace)
 {
     using namespace std::chrono_literals;
 
@@ -61,14 +61,15 @@ void Simulator::run(bool realTime)
             interrupt = true;
         }
 
-        /*
-        std::print("PC=0x{:08X}", m_pc);
-        for (unsigned int i = 0; i != 16; ++i)
+        if (trace)
         {
-            std::print(" x{}=0x{:08X}", i, m_registers[i]);
+            std::print("PC=0x{:08X}", m_pc);
+            for (unsigned int i = 0; i != 16; ++i)
+            {
+                std::print(" x{}=0x{:08X}", i, static_cast<std::uint32_t>(m_registers[i]));
+            }
+            std::println("");
         }
-        std::println("");
-        */
 
         executeInstruction(interrupt);
 
@@ -442,48 +443,46 @@ void Simulator::execOpImmInst(std::uint32_t inst)
 
 void Simulator::execOpInst(std::uint32_t inst)
 {
-    enum class OpFunct3 : std::uint8_t
+    enum class OpFunct10 : std::uint16_t
     {
-        ADD_SUB = 0,
-        SLL = 1,
-        SLT = 2,
-        SLTU = 3,
-        XOR = 4,
-        SRL_SRAL = 5,
-        OR = 6,
-        AND = 7
+        // RV32E base
+        ADD     = 0x000,
+        SUB     = 0x100,
+        SLL     = 0x001,
+        SLT     = 0x002,
+        SLTU    = 0x003,
+        XOR     = 0x004,
+        SRL     = 0x005,
+        SRA     = 0x105,
+        OR      = 0x006,
+        AND     = 0x007,
+        // RV32M
+        MUL     = 0x008,
+        MULH    = 0x009,
+        MULHSU  = 0x00A,
+        MULHU   = 0x00B
     };
 
     auto src1 = getReg(getRs1(inst));
     auto src2 = getReg(getRs2(inst));
-    auto funct3 = static_cast<OpFunct3>(getFunct3(inst));
+    auto funct3 = getFunct3(inst);
     auto funct7 = getFunct7(inst);
+    auto funct10 = static_cast<OpFunct10>((static_cast<std::int16_t>(funct7) << 3) | funct3);
     std::int32_t value;
 
-    if (funct3 != OpFunct3::ADD_SUB && funct3 != OpFunct3::SRL_SRAL && funct7 != 0)
+    switch (funct10)
     {
-        throw BadInstructionException(inst);
-    }
-
-    switch (funct3)
-    {
-        case OpFunct3::ADD_SUB:
-            if (funct7 == 0)
-            {
-                value = src1 + src2;
-            }
-            else if (funct7 == 0x20)
-            {
-                value = src1 - src2;
-            }
-            else
-            {
-                throw BadInstructionException(inst);
-            }
+        case OpFunct10::ADD:
+            value = src1 + src2;
             m_cycleCounter += 8;
             break;
 
-        case OpFunct3::SLL:
+        case OpFunct10::SUB:
+            value = src1 - src2;
+            m_cycleCounter += 8;
+            break;
+
+        case OpFunct10::SLL:
             value = src1 << src2;
             m_cycleCounter += 16;
             if (src2 != 0)
@@ -492,34 +491,23 @@ void Simulator::execOpInst(std::uint32_t inst)
             }
             break;
 
-        case OpFunct3::SLT:
+        case OpFunct10::SLT:
             value = src1 < src2 ? 1 : 0;
             m_cycleCounter += 8;
             break;
 
-        case OpFunct3::SLTU:
+        case OpFunct10::SLTU:
             value = static_cast<std::uint32_t>(src1) < static_cast<std::uint32_t>(src2) ? 1 : 0;
             m_cycleCounter += 8;
             break;
 
-        case OpFunct3::XOR:
+        case OpFunct10::XOR:
             value = src1 ^ src2;
             m_cycleCounter += 8;
             break;
 
-        case OpFunct3::SRL_SRAL:
-            if (funct7 == 0)
-            {
-                value = static_cast<std::uint32_t>(src1) >> static_cast<std::uint32_t>(src2);
-            }
-            else if (funct7 == 0x20)
-            {
-                value = src1 >> static_cast<std::uint32_t>(src2);
-            }
-            else
-            {
-                throw BadInstructionException(inst);
-            }
+        case OpFunct10::SRL:
+            value = static_cast<std::uint32_t>(src1) >> static_cast<std::uint32_t>(src2);
             m_cycleCounter += 16;
             if (src2 != 1)
             {
@@ -527,14 +515,43 @@ void Simulator::execOpInst(std::uint32_t inst)
             }
             break;
 
-        case OpFunct3::OR:
+        case OpFunct10::SRA:
+            value = src1 >> static_cast<std::uint32_t>(src2);
+            m_cycleCounter += 16;
+            if (src2 != 1)
+            {
+                m_cycleCounter += 8;
+            }
+            break;
+
+        case OpFunct10::OR:
             value = src1 | src2;
             m_cycleCounter += 8;
             break;
 
-        case OpFunct3::AND:
+        case OpFunct10::AND:
             value = src1 & src2;
             m_cycleCounter += 8;
+            break;
+
+        case OpFunct10::MUL:
+            value = src1 * src2;
+            m_cycleCounter += 40;
+            break;
+
+        case OpFunct10::MULH:
+            value = static_cast<std::int32_t>((static_cast<std::int64_t>(src1) * static_cast<std::int64_t>(src2)) >> 32);
+            m_cycleCounter += 40;
+            break;
+
+        case OpFunct10::MULHSU:
+            value = static_cast<std::int32_t>((static_cast<std::int64_t>(src1) * static_cast<std::uint64_t>(static_cast<std::uint32_t>(src2))) >> 32);
+            m_cycleCounter += 40;
+            break;
+
+        case OpFunct10::MULHU:
+            value = static_cast<std::int32_t>((static_cast<std::uint64_t>(static_cast<std::uint32_t>(src1)) * static_cast<std::uint64_t>(static_cast<std::uint32_t>(src2))) >> 32);
+            m_cycleCounter += 40;
             break;
 
         default:

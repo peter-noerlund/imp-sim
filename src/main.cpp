@@ -49,6 +49,7 @@ int main(int argc, char** argv)
     std::string_view executableFile;
     bool fast = false;
     bool help = false;
+    bool trace = false;
 
     struct Argument
     {
@@ -61,6 +62,7 @@ int main(int argc, char** argv)
         {"--function-profile", &functionProfileFile},
         {"--flame-profile", &flameProfileFile},
         {"--callgrind-profile", &callgrindProfileFile},
+        {"--trace", &trace},
         {"--fast", &fast},
         {"-h", &help},
         {"--help", &help}
@@ -204,7 +206,7 @@ int main(int argc, char** argv)
             simulator.addHook(*hook);
         }
 
-        simulator.run(!fast);
+        simulator.run(!fast, trace);
 
         return EXIT_SUCCESS;
     }
