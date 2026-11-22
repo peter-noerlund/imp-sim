@@ -11,6 +11,7 @@
 #include <chrono>
 #include <functional>
 #include <thread>
+#include <print>
 
 namespace imp_sim
 {
@@ -59,6 +60,15 @@ void Simulator::run(bool realTime)
             m_pc = 8;
             interrupt = true;
         }
+
+        /*
+        std::print("PC=0x{:08X}", m_pc);
+        for (unsigned int i = 0; i != 16; ++i)
+        {
+            std::print(" x{}=0x{:08X}", i, m_registers[i]);
+        }
+        std::println("");
+        */
 
         executeInstruction(interrupt);
 
@@ -476,6 +486,10 @@ void Simulator::execOpInst(std::uint32_t inst)
         case OpFunct3::SLL:
             value = src1 << src2;
             m_cycleCounter += 16;
+            if (src2 != 0)
+            {
+                m_cycleCounter += 8;
+            }
             break;
 
         case OpFunct3::SLT:
@@ -507,6 +521,10 @@ void Simulator::execOpInst(std::uint32_t inst)
                 throw BadInstructionException(inst);
             }
             m_cycleCounter += 16;
+            if (src2 != 1)
+            {
+                m_cycleCounter += 8;
+            }
             break;
 
         case OpFunct3::OR:
@@ -650,6 +668,10 @@ std::uint32_t Simulator::load32(std::uint32_t address) const
         if ((address & 0x01000000) == 0)
         {
             auto flash = m_executable.data();
+            if (address + 3 > flash.size())
+            {
+                throw std::runtime_error(std::format("Address out of range: 0x{:X}", address));
+            }
             return
                 static_cast<std::uint32_t>(flash[address % flash.size()]) |
                 (static_cast<std::uint32_t>(flash[(address + 1) % flash.size()]) << 8) |
@@ -658,6 +680,10 @@ std::uint32_t Simulator::load32(std::uint32_t address) const
         }
         else
         {
+            if ((address - 0x1000000) + 3 > m_ram.size())
+            {
+                throw std::runtime_error(std::format("Address out of range: 0x{:X}", address));
+            }
             return
                 static_cast<std::uint32_t>(m_ram.at(address % m_ram.size())) |
                 (static_cast<std::uint32_t>(m_ram.at((address + 1) % m_ram.size())) << 8) |
