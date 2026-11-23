@@ -3,6 +3,7 @@
 #include "bad_register_exception.h"
 
 #include <cstdint>
+#include <limits>
 #include <span>
 #include <vector>
 
@@ -212,6 +213,9 @@ private:
     std::uint32_t m_mie = 0;
     std::uint32_t m_mepc = 0;
     std::uint32_t m_mcause = 0;
+#ifdef TT_CACHE
+    std::uint32_t m_cachedPc = std::numeric_limits<std::uint32_t>::max();
+#endif // TT_CACHE
     bool m_interruptEnable = false;
     bool m_prevInterruptEnable = false;
     bool m_timerInterruptEnable = false;

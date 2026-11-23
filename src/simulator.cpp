@@ -112,7 +112,29 @@ void Simulator::executeInstruction(bool interrupt)
     auto pc = m_pc;
     std::uint32_t inst = load32(pc);
 
+#ifdef TT_CACHE
+    if (pc == m_cachedPc)
+    {
+        m_cycleCounter += 8;
+    }
+    else
+    {
+#ifdef TT_CONT_READ
+        m_cycleCounter += 40;
+#else // TT_CONT_READ
+        m_cycleCounter += 56;
+#endif // TT_CONT_READ
+        m_cachedPc = pc + 4;
+    }
+#else // TT_CACHE
+
+#ifdef TT_CONT_READ
+    m_cycleCounter += 40;
+#else // TT_CONT_READ
     m_cycleCounter += 56;
+#endif // TT_CONT_READ
+
+#endif // TT_CACHE
 
     auto opcode = static_cast<Opcode>(inst & 0x7F);
     switch (opcode)
@@ -309,15 +331,36 @@ void Simulator::execLoadInst(std::uint32_t inst)
 
     m_pc += 4;
 
-    if ((address & 0x02000000) == 0)
+    switch ((address >> 24) & 0x3)
     {
-        // RAM/Flash access
-        m_cycleCounter += 8 + 56 + 8;
-    }
-    else
-    {
-        // Device access
-        m_cycleCounter += 8 + 8 + 8;
+        case 0: // Flash
+#ifdef TT_CACHE
+            if (static_cast<std::uint32_t>(address) == m_cachedPc)
+            {
+                m_cycleCounter += 8 + 8 + 8;
+                break;
+            }
+            m_cachedPc = m_pc;
+#endif // TT_CACHE
+
+#ifdef TT_CONT_READ
+            m_cycleCounter += 8 + 40 + 8;
+#else // TT_CONT_READ
+            m_cycleCounter += 8 + 56 + 8;
+#endif // TT_CONT_READ
+            break;
+
+        case 1: // PSRAM
+#ifdef TT_QUAD
+            m_cycleCounter += 8 + 40 + 8;
+#else // TT_QUAD
+            m_cycleCounter += 8 + 56 + 8;
+#endif // TT_QUAD
+            break;
+
+        default: // Devices
+            m_cycleCounter += 8 + 8 + 8;
+            break;
     }
 }
 
@@ -335,17 +378,29 @@ void Simulator::execStoreInst(std::uint32_t inst)
     {
         case 0:
             store8(address, static_cast<std::uint8_t>(src));
-            m_cycleCounter += 32;
+#ifdef TT_QUAD
+            m_cycleCounter += 24;   // 2 * (2 + 6 + 2)
+#else // TT_QUAD
+            m_cycleCounter += 32;   // 2 * (8 + 6 + 2)
+#endif // TT_QUAD
             break;
 
         case 1:
             store16(address, static_cast<std::uint16_t>(src));
-            m_cycleCounter += 40;
+#ifdef TT_QUAD
+            m_cycleCounter += 24;
+#else // TT_QUAD
+            m_cycleCounter += 40;   // 2 * (8 + 6 + 2 * 2)
+#endif // TT_QUAD
             break;
 
         case 2:
             store32(address, static_cast<std::uint32_t>(src));
-            m_cycleCounter += 48;
+#ifdef TT_QUAD
+            m_cycleCounter += 32;
+#else // TT_QUAD
+            m_cycleCounter += 48;   // 2 * (8 + 6 + 4 * 2)
+#endif // TT_QUAD
             break;
 
         default:
@@ -456,11 +511,25 @@ void Simulator::execOpInst(std::uint32_t inst)
         SRA     = 0x105,
         OR      = 0x006,
         AND     = 0x007,
+#if defined(TT_ZMMUL) || defined(TT_M)
         // RV32M
         MUL     = 0x008,
         MULH    = 0x009,
         MULHSU  = 0x00A,
-        MULHU   = 0x00B
+        MULHU   = 0x00B,
+#endif // TT_MMUL
+#ifdef TT_M
+        DIV     = 0x00C,
+        DIVU    = 0x00D,
+        REM     = 0x00E,
+        REMU    = 0x00F,
+#endif // TT_M
+
+#ifdef TT_ZBA
+        SH1ADD  = 0x082,
+        SH2ADD  = 0x084,
+        SH3ADD  = 0x086,
+#endif // TT_ZBA
     };
 
     auto src1 = getReg(getRs1(inst));
@@ -534,25 +603,66 @@ void Simulator::execOpInst(std::uint32_t inst)
             m_cycleCounter += 8;
             break;
 
+#if defined(TT_ZMMUL) || defined(TT_M)
         case OpFunct10::MUL:
             value = src1 * src2;
-            m_cycleCounter += 40;
+            m_cycleCounter += 48;
             break;
 
         case OpFunct10::MULH:
             value = static_cast<std::int32_t>((static_cast<std::int64_t>(src1) * static_cast<std::int64_t>(src2)) >> 32);
-            m_cycleCounter += 40;
+            m_cycleCounter += 48;
             break;
 
         case OpFunct10::MULHSU:
             value = static_cast<std::int32_t>((static_cast<std::int64_t>(src1) * static_cast<std::uint64_t>(static_cast<std::uint32_t>(src2))) >> 32);
-            m_cycleCounter += 40;
+            m_cycleCounter += 48;
             break;
 
         case OpFunct10::MULHU:
             value = static_cast<std::int32_t>((static_cast<std::uint64_t>(static_cast<std::uint32_t>(src1)) * static_cast<std::uint64_t>(static_cast<std::uint32_t>(src2))) >> 32);
-            m_cycleCounter += 40;
+            m_cycleCounter += 48;
             break;
+#endif // TT_ZMMUL || TT_M
+
+#ifdef TT_M
+        case OpFunct10::DIV:
+            value = src1 / src2;
+            m_cycleCounter += 48;
+            break;
+
+        case OpFunct10::DIVU:
+            value = static_cast<std::uint32_t>(src1) / static_cast<std::uint32_t>(src2);
+            m_cycleCounter += 48;
+            break;
+
+        case OpFunct10::REM:
+            value = src1 % src2;
+            m_cycleCounter += 48;
+            break;
+
+        case OpFunct10::REMU:
+            value = static_cast<std::uint32_t>(src1) % static_cast<std::uint32_t>(src2);
+            m_cycleCounter += 48;
+            break;
+#endif // TT_M
+
+#ifdef TT_ZBA
+        case OpFunct10::SH1ADD:
+            value = src2 + (src1 << 1);
+            m_cycleCounter += 24;
+            break;
+
+        case OpFunct10::SH2ADD:
+            value = src2 + (src1 << 2);
+            m_cycleCounter += 24;
+            break;
+
+        case OpFunct10::SH3ADD:
+            value = src2 + (src1 << 3);
+            m_cycleCounter += 24;
+            break;
+#endif // TT_ZBA
 
         default:
             throw BadInstructionException(inst);
