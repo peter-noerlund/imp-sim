@@ -112,21 +112,7 @@ void Simulator::executeInstruction(bool interrupt)
     auto pc = m_pc;
     std::uint32_t inst = load32(pc);
 
-#ifdef TT_CACHE
-    if (pc == m_cachedPc)
-    {
-        m_cycleCounter += 8;
-    }
-    else
-    {
-        m_cycleCounter += 40;
-        m_cachedPc = pc + 4;
-    }
-#else // TT_CACHE
-
     m_cycleCounter += 40;
-
-#endif // TT_CACHE
 
     auto opcode = static_cast<Opcode>(inst & 0x7F);
     switch (opcode)
@@ -326,15 +312,6 @@ void Simulator::execLoadInst(std::uint32_t inst)
     switch ((address >> 24) & 0x3)
     {
         case 0: // Flash
-#ifdef TT_CACHE
-            if (static_cast<std::uint32_t>(address) == m_cachedPc)
-            {
-                m_cycleCounter += 8 + 8 + 8;
-                break;
-            }
-            m_cachedPc = m_pc;
-#endif // TT_CACHE
-
             m_cycleCounter += 8 + 40 + 8;
             break;
 
