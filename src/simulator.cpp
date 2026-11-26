@@ -361,21 +361,46 @@ void Simulator::execStoreInst(std::uint32_t inst)
 
 void Simulator::execOpImmInst(std::uint32_t inst)
 {
-    enum class OpImmFunct3 : std::uint32_t
+    enum class OpImmFunct3 : std::uint8_t
     {
         ADDI = 0,
-        SLLI = 1,
+        OP_IMM_1 = 1,
         SLTI = 2,
         SLTIU = 3,
         XORI = 4,
-        SRxI = 5,
+        OP_IMM_5 = 5,
         ORI = 6,
         ANDI = 7,
+    };
+
+    enum class OpImm1Funct7 : std::uint8_t
+    {
+        SLLI = 0x00,
+        ZBB = 0x30
+    };
+
+    enum class OpImm1ZbbFunct5 : std::uint8_t
+    {
+        CLZ = 0x00,
+        CTZ = 0x01,
+        CPOP = 0x02,
+        SEXT_B = 0x04,
+        SEXT_H = 0x05
+    };
+
+    enum class OpImm5Funct7 : std::uint8_t
+    {
+        SRLI = 0x00,
+        ORC_B = 0x14,
+        SRAI = 0x20,
+        RORI = 0x30,
+        REV8 = 0x34
     };
 
     auto src = getReg(getRs1(inst));
     auto imm = getImmI(inst);
     auto funct3 = static_cast<OpImmFunct3>(getFunct3(inst));
+    auto funct7 = getFunct7(inst);
     std::int32_t value;
 
     switch (funct3)
@@ -385,13 +410,55 @@ void Simulator::execOpImmInst(std::uint32_t inst)
             m_cycleCounter += 8;
             break;
 
-        case OpImmFunct3::SLLI:
-            if (imm < 0 || imm > 31)
+        case OpImmFunct3::OP_IMM_1:
+            switch (static_cast<OpImm1Funct7>(funct7))
             {
-                throw BadInstructionException(inst);
+                case OpImm1Funct7::SLLI:
+                    value = src << imm;
+                    m_cycleCounter += 16;
+                    break;
+
+#ifdef TT_ZBB
+                case OpImm1Funct7::ZBB:
+                    switch (static_cast<OpImm1ZbbFunct5>(getRs2(inst)))
+                    {
+                        case OpImm1ZbbFunct5::CLZ:
+                            value = src == 0 ? 32 : __builtin_clz(src);
+                            m_cycleCounter += 16;
+                            break;
+
+                        case OpImm1ZbbFunct5::CTZ:
+                            value = src == 0 ? 32 : __builtin_ctz(src);
+                            m_cycleCounter += 16;
+                            break;
+
+                        case OpImm1ZbbFunct5::SEXT_B:
+                            value = static_cast<std::int8_t>(src);
+                            m_cycleCounter += 16;
+                            break;
+
+                        case OpImm1ZbbFunct5::SEXT_H:
+                            value = static_cast<std::int16_t>(src);
+                            m_cycleCounter += 16;
+                            break;
+
+#ifndef TT_ZBB_SUBSET
+                        case OpImm1ZbbFunct5::CPOP:
+                            value = __builtin_popcount(src);
+                            m_cycleCounter += 16;
+                            break;
+#endif // TT_ZBB_SUBSET
+
+                        default:
+                            throw BadInstructionException(inst);
+                    }
+                    break;
+
+#endif // TT_ZBB
+
+                default:
+                    throw BadInstructionException(inst);
             }
-            value = src << imm;
-            m_cycleCounter += 16;
             break;
 
         case OpImmFunct3::SLTI:
@@ -409,21 +476,47 @@ void Simulator::execOpImmInst(std::uint32_t inst)
             m_cycleCounter += 8;
             break;
 
-        case OpImmFunct3::SRxI: // SRLI and SRAI
-            switch (imm & 0xFE0)
+        case OpImmFunct3::OP_IMM_5:
+            switch (static_cast<OpImm5Funct7>(funct7))
             {
-                case 0x000: // SRLI
+                case OpImm5Funct7::SRLI:
                     value = static_cast<std::uint32_t>(src) >> imm;
+                    m_cycleCounter += 16;
                     break;
 
-                case 0x400: // SRAI
+                case OpImm5Funct7::SRAI:
                     value = src >> (imm & 0x1F);
+                    m_cycleCounter += 16;
                     break;
+
+#if defined(TT_ZBB) && !defined(TT_ZBB_SUBSET)
+                case OpImm5Funct7::ORC_B:
+                    value =
+                        ((src & 0xFF000000) ? 0x01000000 : 0x00000000) |
+                        ((src & 0x00FF0000) ? 0x00010000 : 0x00000000) |
+                        ((src & 0x0000FF00) ? 0x00000100 : 0x00000000) |
+                        ((src & 0x000000FF) ? 0x00000001 : 0x00000000);
+                    m_cycleCounter += 16;
+                    break;
+
+                case OpImm5Funct7::RORI:
+                    value = (static_cast<std::uint32_t>(src) >> (getRs2(inst))) | (src << (32 - getRs2(inst)));
+                    m_cycleCounter += 16;
+                    break;
+
+                case OpImm5Funct7::REV8:
+                    value =
+                        (src << 24) |
+                        ((src & 0xFF00) << 8) |
+                        ((src & 0xFF0000) >> 8) |
+                        ((static_cast<std::uint32_t>(src) & 0xFF000000) >> 24);
+                    m_cycleCounter += 16;
+                    break;
+#endif // TT_ZBB || TT_ZBB_SUBSET
 
                 default:
                     throw BadInstructionException(inst);
             }
-            m_cycleCounter += 16;
             break;
 
         case OpImmFunct3::ORI:
@@ -451,19 +544,34 @@ void Simulator::execOpInst(std::uint32_t inst)
     {
         // RV32E base
         ADD     = 0x000,
-        SUB     = 0x100,
         SLL     = 0x001,
         SLT     = 0x002,
         SLTU    = 0x003,
         XOR     = 0x004,
         SRL     = 0x005,
-        SRA     = 0x105,
         OR      = 0x006,
-        AND     = 0x007
+        AND     = 0x007,
+        SUB     = 0x100,
+        SRA     = 0x105,
+#ifdef TT_ZBB
+        // Zbb
+        ZEXT_H  = 0x024,
+        MIN     = 0x02C,
+        MINU    = 0x02D,
+        MAX     = 0x02E,
+        MAXU    = 0x02F,
+        ROL     = 0x081,
+        ROR     = 0x085,
+        XNOR    = 0x104,
+        ORN     = 0x106,
+        ANDN    = 0x107
+#endif // TT_ZBB
     };
 
-    auto src1 = getReg(getRs1(inst));
-    auto src2 = getReg(getRs2(inst));
+    auto rs1 = getRs1(inst);
+    auto rs2 = getRs2(inst);
+    auto src1 = getReg(rs1);
+    auto src2 = getReg(rs2);
     auto funct3 = getFunct3(inst);
     auto funct7 = getFunct7(inst);
     auto funct10 = static_cast<OpFunct10>((static_cast<std::int16_t>(funct7) << 3) | funct3);
@@ -532,6 +640,64 @@ void Simulator::execOpInst(std::uint32_t inst)
             value = src1 & src2;
             m_cycleCounter += 8;
             break;
+
+#ifdef TT_ZBB
+        case OpFunct10::XNOR:
+            value = ~(src1 ^ src2);
+            m_cycleCounter += 8;
+            break;
+
+        case OpFunct10::ORN:
+            value = src1 | ~src2;
+            m_cycleCounter += 8;
+            break;
+
+        case OpFunct10::ANDN:
+            value = src1 & ~src2;
+            m_cycleCounter += 8;
+            break;
+
+        case OpFunct10::MIN:
+            value = (src1 < src2) ? src1 : src2;
+            m_cycleCounter += 16;
+            break;
+
+        case OpFunct10::MINU:
+            value = (static_cast<std::uint32_t>(src1) < static_cast<std::uint32_t>(src2)) ? src1 : src2;
+            m_cycleCounter += 16;
+            break;
+
+        case OpFunct10::MAX:
+            value = (src1 < src2) ? src2 : src1;
+            m_cycleCounter += 16;
+            break;
+
+        case OpFunct10::MAXU:
+            value = (static_cast<std::uint32_t>(src1) < static_cast<std::uint32_t>(src2)) ? src2 : src1;
+            m_cycleCounter += 16;
+            break;
+
+        case OpFunct10::ZEXT_H:
+            if (rs2 != 0)
+            {
+                throw BadInstructionException(inst);
+            }
+            value = src1 & 0x0000FFFF;
+            m_cycleCounter += 16;
+            break;
+
+#ifndef TT_ZBB_SUBSET
+        case OpFunct10::ROL:
+            value = (src1 << (src2 & 0x1F)) | (static_cast<std::uint32_t>(src1) >> (32 - (src2 & 0x1F)));
+            m_cycleCounter += 16;
+            break;
+
+        case OpFunct10::ROR:
+            value = (static_cast<std::uint32_t>(src1) >> (src2 & 0x1F)) | (src1 << (32 - (src2 & 0x1F)));
+            m_cycleCounter += 16;
+            break;
+#endif // TT_ZBB_SUBSET
+#endif // TT_ZBB
 
         default:
             throw BadInstructionException(inst);
