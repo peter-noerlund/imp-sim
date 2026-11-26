@@ -460,19 +460,6 @@ void Simulator::execOpInst(std::uint32_t inst)
         SRA     = 0x105,
         OR      = 0x006,
         AND     = 0x007,
-#if defined(TT_ZMMUL) || defined(TT_M)
-        // RV32M
-        MUL     = 0x008,
-        MULH    = 0x009,
-        MULHSU  = 0x00A,
-        MULHU   = 0x00B,
-#endif // TT_MMUL
-#ifdef TT_M
-        DIV     = 0x00C,
-        DIVU    = 0x00D,
-        REM     = 0x00E,
-        REMU    = 0x00F,
-#endif // TT_M
 
 #ifdef TT_ZBA
         SH1ADD  = 0x082,
@@ -556,50 +543,6 @@ void Simulator::execOpInst(std::uint32_t inst)
             value = src1 & src2;
             m_cycleCounter += 8;
             break;
-
-#if defined(TT_ZMMUL) || defined(TT_M)
-        case OpFunct10::MUL:
-            value = src1 * src2;
-            m_cycleCounter += 48;
-            break;
-
-        case OpFunct10::MULH:
-            value = static_cast<std::int32_t>((static_cast<std::int64_t>(src1) * static_cast<std::int64_t>(src2)) >> 32);
-            m_cycleCounter += 48;
-            break;
-
-        case OpFunct10::MULHSU:
-            value = static_cast<std::int32_t>((static_cast<std::int64_t>(src1) * static_cast<std::uint64_t>(static_cast<std::uint32_t>(src2))) >> 32);
-            m_cycleCounter += 48;
-            break;
-
-        case OpFunct10::MULHU:
-            value = static_cast<std::int32_t>((static_cast<std::uint64_t>(static_cast<std::uint32_t>(src1)) * static_cast<std::uint64_t>(static_cast<std::uint32_t>(src2))) >> 32);
-            m_cycleCounter += 48;
-            break;
-#endif // TT_ZMMUL || TT_M
-
-#ifdef TT_M
-        case OpFunct10::DIV:
-            value = src1 / src2;
-            m_cycleCounter += 48;
-            break;
-
-        case OpFunct10::DIVU:
-            value = static_cast<std::uint32_t>(src1) / static_cast<std::uint32_t>(src2);
-            m_cycleCounter += 48;
-            break;
-
-        case OpFunct10::REM:
-            value = src1 % src2;
-            m_cycleCounter += 48;
-            break;
-
-        case OpFunct10::REMU:
-            value = static_cast<std::uint32_t>(src1) % static_cast<std::uint32_t>(src2);
-            m_cycleCounter += 48;
-            break;
-#endif // TT_M
 
 #ifdef TT_ZBA
         case OpFunct10::SH1ADD:

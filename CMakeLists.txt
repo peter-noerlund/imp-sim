@@ -4,8 +4,6 @@ list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
 project(imp-sim LANGUAGES CXX)
 
-option(TT_ZMMUL "Enable Zmmul extension with 32-cycles" OFF)
-option(TT_M "Enable M extension with 32-cycles" OFF)
 option(TT_ZBA "Enable Zba extension" OFF)
 option(TT_ZICOND "Enable Zicond extension" OFF)
 
