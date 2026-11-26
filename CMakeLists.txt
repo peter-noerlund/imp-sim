@@ -4,7 +4,6 @@ list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
 project(imp-sim LANGUAGES CXX)
 
-option(TT_ZBA "Enable Zba extension" OFF)
 option(TT_ZICOND "Enable Zicond extension" OFF)
 
 find_package(ALSA)
@@ -33,15 +32,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang"
 endif()
 if(TT_CACHE)
     target_compile_definitions(imp-sim PRIVATE TT_CACHE)
-endif()
-if(TT_ZMMUL)
-    target_compile_definitions(imp-sim PRIVATE TT_ZMMUL)
-endif()
-if(TT_M)
-    target_compile_definitions(imp-sim PRIVATE TT_M)
-endif()
-if(TT_ZBA)
-    target_compile_definitions(imp-sim PRIVATE TT_ZBA)
 endif()
 if(TT_ZICOND)
     target_compile_definitions(imp-sim PRIVATE TT_ZICOND)

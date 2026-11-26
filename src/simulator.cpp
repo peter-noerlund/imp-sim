@@ -461,12 +461,6 @@ void Simulator::execOpInst(std::uint32_t inst)
         OR      = 0x006,
         AND     = 0x007,
 
-#ifdef TT_ZBA
-        SH1ADD  = 0x082,
-        SH2ADD  = 0x084,
-        SH3ADD  = 0x086,
-#endif // TT_ZBA
-
 #ifdef TT_ZICOND
         CZERO_EQZ = 0x03D,
         CZERO_NEZ = 0x03F,
@@ -543,23 +537,6 @@ void Simulator::execOpInst(std::uint32_t inst)
             value = src1 & src2;
             m_cycleCounter += 8;
             break;
-
-#ifdef TT_ZBA
-        case OpFunct10::SH1ADD:
-            value = src2 + (src1 << 1);
-            m_cycleCounter += 24;
-            break;
-
-        case OpFunct10::SH2ADD:
-            value = src2 + (src1 << 2);
-            m_cycleCounter += 24;
-            break;
-
-        case OpFunct10::SH3ADD:
-            value = src2 + (src1 << 3);
-            m_cycleCounter += 24;
-            break;
-#endif // TT_ZBA
 
 #ifdef TT_ZICOND
         case OpFunct10::CZERO_EQZ:
