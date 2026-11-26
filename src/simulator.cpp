@@ -119,20 +119,12 @@ void Simulator::executeInstruction(bool interrupt)
     }
     else
     {
-#ifdef TT_CONT_READ
         m_cycleCounter += 40;
-#else // TT_CONT_READ
-        m_cycleCounter += 56;
-#endif // TT_CONT_READ
         m_cachedPc = pc + 4;
     }
 #else // TT_CACHE
 
-#ifdef TT_CONT_READ
     m_cycleCounter += 40;
-#else // TT_CONT_READ
-    m_cycleCounter += 56;
-#endif // TT_CONT_READ
 
 #endif // TT_CACHE
 
@@ -343,19 +335,11 @@ void Simulator::execLoadInst(std::uint32_t inst)
             m_cachedPc = m_pc;
 #endif // TT_CACHE
 
-#ifdef TT_CONT_READ
             m_cycleCounter += 8 + 40 + 8;
-#else // TT_CONT_READ
-            m_cycleCounter += 8 + 56 + 8;
-#endif // TT_CONT_READ
             break;
 
         case 1: // PSRAM
-#ifdef TT_QUAD
             m_cycleCounter += 8 + 40 + 8;
-#else // TT_QUAD
-            m_cycleCounter += 8 + 56 + 8;
-#endif // TT_QUAD
             break;
 
         default: // Devices
@@ -378,29 +362,17 @@ void Simulator::execStoreInst(std::uint32_t inst)
     {
         case 0:
             store8(address, static_cast<std::uint8_t>(src));
-#ifdef TT_QUAD
             m_cycleCounter += 24;   // 2 * (2 + 6 + 2)
-#else // TT_QUAD
-            m_cycleCounter += 32;   // 2 * (8 + 6 + 2)
-#endif // TT_QUAD
             break;
 
         case 1:
             store16(address, static_cast<std::uint16_t>(src));
-#ifdef TT_QUAD
             m_cycleCounter += 24;
-#else // TT_QUAD
-            m_cycleCounter += 40;   // 2 * (8 + 6 + 2 * 2)
-#endif // TT_QUAD
             break;
 
         case 2:
             store32(address, static_cast<std::uint32_t>(src));
-#ifdef TT_QUAD
             m_cycleCounter += 32;
-#else // TT_QUAD
-            m_cycleCounter += 48;   // 2 * (8 + 6 + 4 * 2)
-#endif // TT_QUAD
             break;
 
         default:
