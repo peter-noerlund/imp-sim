@@ -459,12 +459,7 @@ void Simulator::execOpInst(std::uint32_t inst)
         SRL     = 0x005,
         SRA     = 0x105,
         OR      = 0x006,
-        AND     = 0x007,
-
-#ifdef TT_ZICOND
-        CZERO_EQZ = 0x03D,
-        CZERO_NEZ = 0x03F,
-#endif // TT_ZICOND
+        AND     = 0x007
     };
 
     auto src1 = getReg(getRs1(inst));
@@ -537,18 +532,6 @@ void Simulator::execOpInst(std::uint32_t inst)
             value = src1 & src2;
             m_cycleCounter += 8;
             break;
-
-#ifdef TT_ZICOND
-        case OpFunct10::CZERO_EQZ:
-            value = src2 == 0 ? 0 : src1;
-            m_cycleCounter += 8; // Assuming patching SERV RISC-V
-            break;
-
-        case OpFunct10::CZERO_NEZ:
-            value = src2 == 0 ? src1 : 0;
-            m_cycleCounter += 8;
-            break;
-#endif // TT_ZICOND
 
         default:
             throw BadInstructionException(inst);

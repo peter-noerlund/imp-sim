@@ -4,8 +4,6 @@ list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
 project(imp-sim LANGUAGES CXX)
 
-option(TT_ZICOND "Enable Zicond extension" OFF)
-
 find_package(ALSA)
 find_package(stb CONFIG REQUIRED)
 find_package(X11)
@@ -29,12 +27,6 @@ target_compile_features(imp-sim PRIVATE cxx_std_23)
 target_include_directories(imp-sim PRIVATE src)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     target_compile_options(imp-sim PRIVATE -Wall -W -Wextra -Wpedantic)
-endif()
-if(TT_CACHE)
-    target_compile_definitions(imp-sim PRIVATE TT_CACHE)
-endif()
-if(TT_ZICOND)
-    target_compile_definitions(imp-sim PRIVATE TT_ZICOND)
 endif()
 
 if(X11_FOUND)
