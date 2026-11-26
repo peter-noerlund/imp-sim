@@ -6,6 +6,7 @@ project(imp-sim LANGUAGES CXX)
 
 option(TT_ZBB "Enable Zbb extension" OFF)
 option(TT_ZBB_SUBSET "Enable Zbb subset only" OFF)
+option(TT_XMUL16, "Enable Xmul16 extension" OFF)
 
 find_package(ALSA)
 find_package(stb CONFIG REQUIRED)
@@ -36,6 +37,9 @@ if(TT_ZBB)
     if(TT_ZBB_SUBSET)
         target_compile_definitions(imp-sim PRIVATE TT_ZBB_SUBSET)
     endif()
+endif()
+if(TT_XMUL16)
+    target_compile_definitions(imp-sim PRIVATE TT_XMUL16)
 endif()
 
 if(X11_FOUND)

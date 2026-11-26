@@ -97,6 +97,7 @@ void Simulator::executeInstruction(bool interrupt)
     enum Opcode : std::uint8_t
     {
         LOAD = 0x03,
+        CUSTOM0 = 0x0B,
         MISC_MEM = 0x0F,
         OP_IMM = 0x13,
         AUIPC = 0x17,
@@ -160,6 +161,12 @@ void Simulator::executeInstruction(bool interrupt)
         case Opcode::SYSTEM:
             execSystemInst(inst);
             break;
+
+#ifdef TT_XMUL16
+        case Opcode::CUSTOM0:
+            execCustom0Inst(inst);
+            break;
+#endif // TT_XMULat
 
         default:
             throw BadInstructionException(inst);
@@ -806,6 +813,42 @@ void Simulator::execSystemInst(std::uint32_t inst)
     m_pc += 4;
     m_cycleCounter += 8;
 }
+
+#ifdef TT_XMUL16
+
+void Simulator::execCustom0Inst(std::uint32_t inst)
+{
+    // fffffff rrrrr rrrrr fff rrrrr ooooooo
+    auto funct3 = getFunct3(inst);
+    auto rs1 = getRs1(inst);
+    auto rs2 = getRs2(inst);
+    auto rd = getRd(inst);
+    auto src1 = getReg(rs1) & 0x0000FFFF;
+    auto src2 = getReg(rs2) & 0x0000FFFF;
+
+    std::int32_t dst = 0;
+    switch (funct3)
+    {
+        case 0: // MUL16
+            dst = static_cast<std::int32_t>(static_cast<std::int16_t>(src1)) * static_cast<std::int32_t>(static_cast<std::int16_t>(src2));
+            break;
+
+        case 1: // MUL16SU
+            dst = static_cast<std::int32_t>(static_cast<std::int16_t>(src1)) * src2;
+            break;
+
+        case 2: // MUL16U
+            dst = src1 * src2;
+            break;
+    }
+
+    setReg(rd, dst);
+
+    m_pc += 4;
+    m_cycleCounter += 24;
+}
+
+#endif // TT_XMUL16
 
 std::uint8_t Simulator::load8(std::uint32_t address) const
 {

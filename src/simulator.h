@@ -73,6 +73,9 @@ private:
     void execOpInst(std::uint32_t inst);
     void execMiscMemInst(std::uint32_t inst);
     void execSystemInst(std::uint32_t inst);
+#ifdef TT_XMUL16
+    void execCustom0Inst(std::uint32_t inst);
+#endif // TT_XMUL16
 
     std::uint32_t getCsr(std::uint16_t csr);
     void setCsr(std::uint16_t csr, std::uint32_t value);
