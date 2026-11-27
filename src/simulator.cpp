@@ -829,16 +829,12 @@ void Simulator::execCustom0Inst(std::uint32_t inst)
     std::int32_t dst = 0;
     switch (funct3)
     {
-        case 0: // MUL16
-            dst = static_cast<std::int32_t>(static_cast<std::int16_t>(src1)) * static_cast<std::int32_t>(static_cast<std::int16_t>(src2));
+        case 0: // MUL16U
+            dst = src1 * src2;
             break;
 
         case 1: // MUL16SU
             dst = static_cast<std::int32_t>(static_cast<std::int16_t>(src1)) * src2;
-            break;
-
-        case 2: // MUL16U
-            dst = src1 * src2;
             break;
     }
 
